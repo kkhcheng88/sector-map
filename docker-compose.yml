@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${PORT:-8000}
-      SECTOR_MAP_BASE: ${SECTOR_MAP_BASE-/sectors}
+      SECTOR_MAP_BASE: ${SECTOR_MAP_BASE:-}
       SECTOR_MAP_TOKEN: ${SECTOR_MAP_TOKEN:-}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the GrokBot Postgres connection URL}
     ports:
