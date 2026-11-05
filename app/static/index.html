@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>US Sector Rotation</title>
+  <base href="__PUBLIC_BASE__/">
+  <link rel="stylesheet" href="__BASE__/static/styles.css">
+  <script defer src="__BASE__/static/app.js"></script>
+</head>
+<body>
+  <header>
+    <div><span class="eyebrow">MARKET OBSERVATORY / US EQUITIES</span><h1>US Sector Rotation</h1><p>Relative trend & acceleration · Benchmark SPY · Daily closing points</p></div>
+    <button id="refresh" disabled>Refresh prices</button>
+  </header>
+  <section class="toolbar" aria-label="Chart group">
+    <label for="active-group">Active group</label>
+    <select id="active-group" disabled aria-label="Active group"></select>
+    <button id="manage" disabled>Manage groups</button>
+    <span id="group-count" class="muted"></span>
+    <label class="token-field" hidden>Management token <input id="token" type="password" autocomplete="off" placeholder="Bearer token" spellcheck="false"></label>
+  </section>
+  <p id="action-status" role="status"></p>
+  <section class="templates toolbar" aria-label="Saved templates">
+    <label for="template-select">Templates</label>
+    <select id="template-select" aria-label="Saved templates"><option value="">No saved templates</option></select>
+    <button id="load-template" disabled>Load</button>
+    <button id="overwrite-template" disabled>Overwrite</button>
+    <button id="delete-template" class="danger" disabled>Delete</button>
+    <form id="save-template-form" class="input-row">
+      <input id="template-name" aria-label="New template name" maxlength="60" placeholder="Template name" required>
+      <button id="save-template" disabled>Save current setup</button>
+    </form>
+  </section>
+  <p class="template-help">Templates save all groups and the active selection. Load replaces your saved setup; save it first if you want to keep it.</p>
+  <p id="status" role="status">Fetching group configuration…</p>
+  <details id="excluded-details" hidden><summary>Unavailable tickers · excluded from chart and summary ranking</summary><ul id="excluded"></ul></details>
+  <main class="card">
+    <div class="chart-heading">
+      <div><h2>Rotation map <span class="muted">輪動圖</span></h2><p>Hover to inspect · Click a ticker or trail to focus · Older points fade</p></div>
+      <label class="window-control" for="trail-length">Trail length
+        <select id="trail-length">
+          <option value="10">10 sessions · 2 weeks</option>
+          <option value="63">63 sessions · 3 months</option>
+          <option value="126">126 sessions · 6 months</option>
+          <option value="252">252 sessions · 1 year</option>
+          <option value="504">504 sessions · 2 years</option>
+        </select>
+      </label>
+    </div>
+    <div class="focus-bar"><span id="focus-status" role="status">All visible trails</span><button id="clear-focus" disabled>Clear focus</button></div>
+    <div class="chart-wrap"><svg id="chart" viewBox="0 0 1200 740" role="group" aria-label="Sector rotation quadrant chart. Focus a ticker with Enter or Space; clear with Escape."></svg></div>
+    <p class="axis-help">X → Relative trend / 相對趨勢 &nbsp; · &nbsp; Y ↑ Acceleration / 加速 &nbsp; · &nbsp; Centre = 100</p>
+    <div class="legend-bar"><span>Visible tickers <span class="muted">· older trails fade toward the past</span></span><button id="toggle" disabled>Hide all</button></div>
+    <div id="legend" aria-label="Visible tickers"></div>
+  </main>
+  <section class="card summary-card" aria-labelledby="summary-title">
+    <div class="dialog-heading"><div><h2 id="summary-title">廣東話輪動小結</h2><p>Current active group · All tickers, including trails hidden in the legend</p></div><div class="summary-actions"><button id="generate-summary" class="primary" disabled>Generate summary</button><button id="copy-summary" disabled>Copy Markdown</button></div></div>
+    <p id="summary-status" role="status">Generate a short Cantonese brief from the current map.</p>
+    <pre id="summary-text" lang="zh-Hant" hidden></pre>
+  </section>
+  <section class="card patterns-card" aria-labelledby="patterns-title">
+    <div class="dialog-heading"><div><span class="eyebrow">TRAIL ANALYSIS / RULE BASED</span><h2 id="patterns-title">Long-trail patterns <span class="muted">軌跡筆記</span></h2><p>Uses the selected window and all eligible tickers, including hidden trails.</p></div><button id="copy-patterns" disabled>Copy Markdown</button></div>
+    <p id="patterns-status" role="status">Waiting for the current map…</p>
+    <div class="pattern-table-wrap" hidden><table id="pattern-table"><caption class="sr-only">Patterns from the selected trail window</caption><thead><tr><th scope="col">Ticker / coverage</th><th scope="col">Rotation</th><th scope="col">Time in quadrant · sessions</th><th scope="col">Crosses X / Y</th><th scope="col">Distance to centre</th></tr></thead><tbody id="pattern-rows"></tbody></table></div>
+    <details class="pattern-copy"><summary>廣東話 ELI5 · Pasteable notes</summary><pre id="patterns-text" lang="zh-Hant"></pre></details>
+    <details class="method-help"><summary>How to read these patterns</summary><p>Rotation measures signed angles around (100, 100). Clockwise / counterclockwise needs at least ⅛ net turn and 60% directional consistency; otherwise it is mixed or unclear. Steps passing within 0.1 of the centre are ignored for direction. Quadrant time counts daily closing points; touching an axis alone is not a crossing.</p><p>Expanding / tightening compares median distance from the centre in the last third with the first third. The change must reach 15% and at least 0.1 indicator units, with at least 6 points. Shorter histories are labelled with their actual coverage. These describe relative indicators, not returns or predictions.</p></details>
+  </section>
+  <footer><span>Daily adjusted closes · Server refreshes every 15 minutes · Client polls every minute</span><span>X: relative trend → &nbsp; Y: acceleration ↑</span></footer>
+  <div id="tooltip" role="tooltip"></div>
+  <dialog id="editor" aria-labelledby="editor-title">
+    <div class="dialog-heading"><div><h2 id="editor-title">Manage groups</h2><p>Edit your groups, then save. One group is active on the chart.</p></div><button id="close-editor" aria-label="Close group editor">✕</button></div>
+    <div class="editor-layout">
+      <aside><div id="group-list" aria-label="Groups"></div><form id="new-group-form"><label for="new-group">New group</label><div class="input-row"><input id="new-group" maxlength="60" placeholder="Group name" required><button>Add</button></div></form></aside>
+      <section id="group-fields">
+        <form id="rename-form"><label for="group-name">Group name</label><div class="input-row"><input id="group-name" maxlength="60" required><button>Rename</button></div></form>
+        <div class="group-actions"><button id="use-group">Use on chart</button><button id="delete-group" class="danger">Delete group</button></div>
+        <h3>Tickers <span id="ticker-count" class="muted"></span></h3>
+        <div id="ticker-list" aria-label="Group tickers"></div>
+        <form id="add-tickers-form"><label for="new-tickers">Add any US stock or ETF ticker</label><div class="input-row"><input id="new-tickers" placeholder="e.g. MAGS, AIPO, DRAM, AAPL" maxlength="800" spellcheck="false" autocapitalize="characters" required><button>Add</button></div><p>Separate tickers with commas or spaces. Symbols are saved in uppercase. Up to 50 per group. Newly listed tickers need about 291 daily sessions before they can appear.</p></form>
+      </section>
+    </div>
+    <label class="token-field" hidden>Management token <input id="editor-token" type="password" autocomplete="off" placeholder="Bearer token" spellcheck="false"></label>
+    <p id="editor-status" role="status"></p>
+    <div class="dialog-footer"><button id="reload-groups">Reload saved groups</button><div><button id="cancel-editor">Cancel</button> <button id="save-groups" class="primary">Save changes</button></div></div>
+  </dialog>
+</body>
+</html>

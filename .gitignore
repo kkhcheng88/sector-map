@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+.env.*
+!.env.example
+artifacts/
+tests/tmp*/
+*.sqlite*
+*.png
+rotation-trails-latest.json
+.agents/
+.aws/
+.codex/

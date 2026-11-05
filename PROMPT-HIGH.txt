@@ -1,0 +1,30 @@
+# Improve US sector rotation map (HIGH effort) — Karson revised
+
+Work ONLY inside /workspace/us-sector-rotation. Extend existing FastAPI app; do not rewrite from scratch.
+
+## Persistence: PostgreSQL (NOT sqlite)
+- Use Hostinger/Coolify Postgres (same GrokBot stack as social-db). Env: DATABASE_URL (or PGHOST/PGUSER/PGPASSWORD/PGDATABASE).
+- Persist groups, tickers, active group, and named templates in Postgres.
+- Docker: no sqlite volume for config. Optional in-memory/cache for price bars only.
+- Migrations: simple SQL on startup or alembic-light CREATE IF NOT EXISTS is fine.
+- Local dev: if DATABASE_URL missing, fall back to sqlite ONLY for local unittest; production path is Postgres. Document DATABASE_URL for Coolify.
+
+## Hierarchy + free tickers
+- Default groups: (1) iShare Sector = XLK XLF XLE XLY XLP XLV XLI XLB XLU XLRE XLC (2) Sector ETF = empty editable
+- UI: switch active group; create/rename/delete groups; add/remove ANY US ticker (MAGS, AIPO, DRAM, …) — not XL*-only
+- Active group drives yfinance universe + chart; benchmark SPY
+- Optional SECTOR_MAP_TOKEN Bearer on mutating routes; public GET OK
+
+## Templates
+- Save current groups+tickers+active as named template; load / overwrite / delete; stored in Postgres
+
+## Summary (most important)
+- Endpoint + UI action: generate a short Cantonese Traditional ELI5 rotation summary from current active-group map (leaders/laggards by quadrant, what moved vs prior point in trail, one 👉 call).
+- GET /api/summary (or POST) returns markdown/text Karson can paste into Macro brief; also show on page.
+- No LLM required for v1 — rule-based from coordinates (Leading/Improving/Lagging/Weakening). Keep deterministic.
+
+## Keep
+- 15-min refresh; faded trails; label deconflict; legend toggles; /api/healthz; SECTOR_MAP_BASE=/sectors; Dockerfile; README Coolify (GrokBot app sector-map, DATABASE_URL, StripPrefix)
+
+## Done when
+Groups+tickers+templates in Postgres; free tickers; rule-based summary API+UI; tests pass; README updated.

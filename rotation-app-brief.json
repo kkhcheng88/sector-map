@@ -1,0 +1,28 @@
+{
+  "method": "lo2cin4 vs SPY",
+  "h": 21,
+  "s": 5,
+  "universe": [
+    "XLK",
+    "XLF",
+    "XLE",
+    "XLY",
+    "XLP",
+    "XLV",
+    "XLI",
+    "XLB",
+    "XLU",
+    "XLRE",
+    "XLC"
+  ],
+  "trail_days": 10,
+  "ui": [
+    "legend toggles",
+    "deconflict labels",
+    "fade past trails",
+    "quadrant labels not overlapping points"
+  ],
+  "refresh": "15m",
+  "data": "Longbridge preferred else yfinance",
+  "as_of_sample": "2026-11-04T16:00:00-05:00"
+}

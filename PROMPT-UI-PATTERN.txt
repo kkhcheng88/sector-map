@@ -1,0 +1,15 @@
+# Follow-up HIGH: interactive rotation diagram + long-trail patterns
+
+Work ONLY in /workspace/us-sector-rotation. Keep Postgres groups/tickers/templates/summary.
+
+## UI tone (Karson clarification — important)
+- Do **NOT** make an RPG / pixel-cat / gamified look.
+- Want a clean **interactive diagram** so Karson can understand the trend: hover tooltips, click ticker to highlight its trail, show/hide via legend, pan/zoom optional if simple, clear quadrant labels (Leading/Improving/Lagging/Weakening + 中文 OK).
+- Dark professional chart is fine; neon glow light touch OK, not toyish.
+- Keep usable panels: active group switch, add/remove any ticker (MAGS/AIPO/DRAM…), save/load/delete **templates**, summary + copy markdown.
+
+## Patterns from long trails
+- Trail length control: 10 / 63 / 126 / 252 / 504 sessions (~2y).
+- Deterministic pattern notes (clockwise/CCW, quadrant time, axis crosses, path expand/tighten) + Cantonese ELI5 pasteable blurb. No LLM.
+
+Preserve healthz, /sectors, Dockerfile, DATABASE_URL Postgres.
