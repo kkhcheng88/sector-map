@@ -58,23 +58,6 @@ class TemplateName(BaseModel):
         return value
 
 
-class PrefixRootMiddleware:
-    """Restore the ASGI public path after StripPrefix, including for mounted assets."""
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope['type'] == 'http':
-            root, path = scope.get('root_path', '').rstrip('/'), scope['path']
-            if root and path != root and not path.startswith(root + '/'):
-                path = root + path
-            if path == root:
-                path += '/'
-            if path != scope['path']:
-                scope = {**scope, 'path': path, 'raw_path': path.encode()}
-        await self.app(scope, receive, send)
-
-
 class PriceCache:
     def __init__(self, store, fetcher):
         self.store, self.fetcher = store, fetcher
@@ -167,9 +150,11 @@ def create_app(*, store=None, fetcher=fetch, start_scheduler=True):
                 except asyncio.CancelledError:
                     pass
 
-    base = '/' + os.getenv('SECTOR_MAP_BASE', '').strip('/') if os.getenv('SECTOR_MAP_BASE', '').strip('/') else ''
-    app = FastAPI(title='US Sector Rotation', root_path=base, lifespan=lifespan)
-    app.add_middleware(PrefixRootMiddleware)
+    # Public HTML URLs only: Traefik StripPrefix already removed this prefix
+    # from incoming paths. Keep root_path unset and route those paths unchanged.
+    base = os.getenv('SECTOR_MAP_BASE', '').strip('/')
+    public_base = '/' + base if base else ''
+    app = FastAPI(title='US Sector Rotation', lifespan=lifespan)
     app.mount('/static', StaticFiles(directory=STATIC), name='static')
     auth = [Depends(require_mutation_auth)]
 
@@ -255,10 +240,9 @@ def create_app(*, store=None, fetcher=fetch, start_scheduler=True):
         return await health()
 
     @app.get('/')
-    async def index(request: Request):
+    async def index():
         return HTMLResponse((STATIC / 'index.html').read_text().replace(
-            '__PUBLIC_BASE__', request.scope.get('root_path', '').rstrip('/')).replace(
-            '__BASE__', request.scope.get('root_path', '').rstrip('/')))
+            '__PUBLIC_BASE__', public_base).replace('__BASE__', public_base))
 
     return app
 

@@ -59,7 +59,17 @@ def serve(port):
     os.environ['SECTOR_MAP_TOKEN'] = ''
     with tempfile.TemporaryDirectory(dir=ROOT / 'tests') as tmp:
         app = create_app(store=Store.for_unittest(Path(tmp) / 'smoke.sqlite3'), fetcher=fixture)
-        uvicorn.run(app, host='127.0.0.1', port=port, log_level='error')
+
+        async def strip_prefix(scope, receive, send):
+            # Simulate Traefik: the browser uses /sectors, the app sees stripped
+            # paths with no ASGI root_path. Internal health probes still work.
+            if scope['type'] == 'http' and (scope['path'] == '/sectors' or
+                                          scope['path'].startswith('/sectors/')):
+                path = scope['path'][len('/sectors'):] or '/'
+                scope = {**scope, 'path':path, 'raw_path':path.encode()}
+            await app(scope, receive, send)
+
+        uvicorn.run(strip_prefix, host='127.0.0.1', port=port, log_level='error')
 
 
 async def smoke():

@@ -31,6 +31,7 @@ def fixture(tickers):
 
 async def request(app, method, path, body=None, authorization='', root_path=''):
     messages, sent = [], False
+    response_complete = asyncio.Event()
     payload = json.dumps(body).encode() if body is not None else b''
     parsed = urlsplit(path)
     scope = {'type':'http', 'asgi':{'version':'3.0'}, 'http_version':'1.1',
@@ -45,10 +46,14 @@ async def request(app, method, path, body=None, authorization='', root_path=''):
         if not sent:
             sent = True
             return {'type':'http.request', 'body':payload, 'more_body':False}
+        # Keep the client connected while StaticFiles streams its response.
+        await response_complete.wait()
         return {'type':'http.disconnect'}
 
     async def send(message):
         messages.append(message)
+        if message['type'] == 'http.response.body' and not message.get('more_body', False):
+            response_complete.set()
 
     await app(scope, receive, send)
     status = next(m['status'] for m in messages if m['type'] == 'http.response.start')
@@ -226,18 +231,33 @@ class GroupAPITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.req('GET', '/api/templates'))[1], {'templates':[]})
 
     async def test_stripped_prefix_assets_and_public_api(self):
-        for path in ['/sectors', '/sectors/']:
-            code, html = await self.req('GET', path, root_path='/sectors')
+        with patch.dict('os.environ', {'SECTOR_MAP_BASE':'/sectors'}):
+            app = create_app(store=self.store, fetcher=self.fetcher, start_scheduler=False)
+        # Traefik removes /sectors before forwarding; ASGI root_path stays empty.
+        async with app.router.lifespan_context(app):
+            self.assertEqual(app.root_path, '')
+            code, html = await request(app, 'GET', '/')
             self.assertEqual(code, 200)
             self.assertIn('src="/sectors/static/app.js"', html)
             self.assertIn('href="/sectors/static/styles.css"', html)
             self.assertNotIn('__BASE__', html)
             self.assertNotIn('__PUBLIC_BASE__', html)
             self.assertIn('<base href="/sectors/">', html)
-        self.assertEqual((await self.req('GET', '/sectors/api/groups', root_path='/sectors'))[0], 200)
-        for path in ['/static/app.js', '/sectors/static/app.js']:
-            self.assertEqual((await self.req('GET', path, root_path='/sectors'))[0], 200, path)
-        self.assertEqual((await self.req('GET', '/'))[0], 200)
+            for path in ['/api/groups', '/api/healthz', '/static/styles.css', '/static/app.js']:
+                code, content = await request(app, 'GET', path)
+                self.assertEqual(code, 200, path)
+                if path.startswith('/static/'):
+                    asset = Path(__file__).resolve().parents[1] / 'app' / path.lstrip('/')
+                    self.assertEqual(content, asset.read_text(), path)
+
+    async def test_direct_assets_and_public_api(self):
+        code, html = await self.req('GET', '/')
+        self.assertEqual(code, 200)
+        self.assertIn('<base href="/">', html)
+        self.assertIn('href="/static/styles.css"', html)
+        self.assertIn('src="/static/app.js"', html)
+        for path in ['/static/styles.css', '/static/app.js']:
+            self.assertEqual((await self.req('GET', path))[0], 200, path)
         self.assertEqual((await self.req('GET', '/api/healthz'))[1]['storage'], 'sqlite-unittest')
 
     async def test_summary_snapshot_id_detects_same_date_corrections(self):

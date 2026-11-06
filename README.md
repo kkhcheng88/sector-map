@@ -24,7 +24,7 @@ export DATABASE_URL='postgresql://sector_map:URL_ENCODED_PASSWORD@social-db:5432
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
-Open http://localhost:8000. Alternatively, set `DATABASE_URL` in your shell or a local `.env` file and run `docker compose up --build -d`. Compose requires a URL for the existing Postgres service; it does not create a database or config volume. For a direct local Docker URL set `SECTOR_MAP_BASE=`; the Compose default `/sectors` expects the proxy described below.
+Open http://localhost:8000. Alternatively, set `DATABASE_URL` in your shell or a local `.env` file and run `docker compose up --build -d`. Compose requires a URL for the existing Postgres service; it does not create a database or config volume. For direct local use, leave `SECTOR_MAP_BASE=` empty (the Compose default). Behind the Coolify proxy described below, set it to `/sectors`.
 
 `DATABASE_URL` accepts `postgresql://` or `postgres://` and optional libpq parameters such as `?sslmode=require`. Alternatively, omit the URL and supply `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, optionally `PGPORT` (5432) and `PGSSLMODE`. Dockerfile deployments accept either form; the supplied Compose file uses `DATABASE_URL`. Credentials belong in Coolify secrets, never the repository. URL-encode special characters in URL passwords.
 
@@ -146,6 +146,8 @@ SECTOR_MAP_TOKEN=OPTIONAL_MANAGEMENT_SECRET
 
 Use the internal connection URL from Coolify's Postgres resource; add SSL settings if required by your Hostinger connection. Check **both** `/sectors/api/healthz` (storage must be `postgresql`) and `/sectors/api/groups` after deployment. Verify edits and templates survive an application restart.
 
-Route `https://karst.casy.hk/sectors` through Traefik **StripPrefix `/sectors`** to port 8000. The app serves internal `/` and `/api/...`; FastAPI `root_path` generates public asset/docs URLs with `/sectors`. Strip once in Traefik. Both `/sectors` and `/sectors/` load correctly, with no external frontend assets. Docker health checks use internal `/api/healthz`; the public URL is `/sectors/api/healthz`. No SQLite configuration volume is mounted. Back up the Postgres tables with the existing GrokBot database backups.
+Route `https://karst.casy.hk/sectors` through Traefik **StripPrefix `/sectors`** to port 8000. **Coolify/Hostinger must set `SECTOR_MAP_BASE=/sectors` for correct UI URLs.** It is a public URL prefix used only to render HTML: `<base href="/sectors/">`, `/sectors/static/styles.css`, and `/sectors/static/app.js`. Leaving it empty behind this proxy makes the browser request assets at the domain root.
+
+Traefik strips `/sectors` before forwarding, so the app matches internal `/`, `/api/*`, and `/static/*` with no ASGI prefix. `SECTOR_MAP_BASE` does not set FastAPI `root_path`. Middleware must not re-add the prefix to ASGI paths after StripPrefix, which breaks API and static-file routing. Both public `/sectors` and `/sectors/` load with these settings, with no external frontend assets. Check that the page emits the public URLs above and that both `/sectors/static/styles.css` and `/sectors/static/app.js` return 200. Docker health checks use internal `/api/healthz`; the public URL is `/sectors/api/healthz`. No SQLite configuration volume is mounted. Back up the Postgres tables with the existing GrokBot database backups.
 
 Longbridge integration is deferred; no `LONGBRIDGE_*` variables are consumed.
